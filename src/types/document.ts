@@ -5,12 +5,19 @@ export interface Document {
   type: string;
   uploadedAt: Date;
   size: number;
-  pageCount?: number;
+  pageCount: number;
+  chunks?: DocumentChunk[];
 }
 
-export interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
+export interface DocumentChunk {
+  id: number;
+  text: string;
+  startPos: number;
+  endPos: number;
+  score?: number;
+}
+
+export interface RetrievalResult {
+  chunk: DocumentChunk;
+  score: number;
 }

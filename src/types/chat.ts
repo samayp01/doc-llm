@@ -1,8 +1,13 @@
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
   content: string;
+  role: 'user' | 'assistant' | 'system';
   timestamp: Date;
+  sources?: Array<{
+    chunkId: number;
+    startPos: number;
+    endPos: number;
+  }>;
 }
 
 export interface Chat {
@@ -11,9 +16,5 @@ export interface Chat {
   messages: Message[];
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface ChatState {
-  chats: Chat[];
-  currentChatId: string | null;
+  documentId?: string;
 }
