@@ -1,30 +1,41 @@
-import { useCallback } from 'react';
-import { motion } from 'motion/react';
-import { Upload, FileText, File } from 'lucide-react';
-import { Button } from './ui/button';
+import { useCallback } from 'react'
+import { motion } from 'motion/react'
+import { Upload, FileText, File } from 'lucide-react'
+import { Button } from './ui/button'
 
 interface DocumentUploadProps {
-  onUpload: (file: File) => void;
+  onUpload: (file: File) => void
+  disabled?: boolean
 }
 
-export function DocumentUpload({ onUpload }: DocumentUploadProps) {
+export function DocumentUpload({ onUpload, disabled }: DocumentUploadProps) {
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      e.preventDefault();
-      const file = e.dataTransfer.files[0];
+      e.preventDefault()
+      if (disabled) return
+      const file = e.dataTransfer.files[0]
       if (file && isValidFileType(file)) {
-        onUpload(file);
+        onUpload(file)
       }
     },
-    [onUpload]
-  );
+    [onUpload, disabled]
+  )
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && isValidFileType(file)) {
-      onUpload(file);
+    console.log('[DocumentUpload] handleFileInput triggered')
+    if (disabled) {
+      console.log('[DocumentUpload] Upload disabled, returning')
+      return
     }
-  };
+    const file = e.target.files?.[0]
+    console.log('[DocumentUpload] File selected:', file?.name, file?.type)
+    if (file && isValidFileType(file)) {
+      console.log('[DocumentUpload] File is valid, calling onUpload')
+      onUpload(file)
+    } else {
+      console.log('[DocumentUpload] File is invalid or not selected')
+    }
+  }
 
   const isValidFileType = (file: File) => {
     const validTypes = [
@@ -32,9 +43,9 @@ export function DocumentUpload({ onUpload }: DocumentUploadProps) {
       'text/plain',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'text/markdown',
-    ];
-    return validTypes.includes(file.type) || file.name.endsWith('.txt') || file.name.endsWith('.md');
-  };
+    ]
+    return validTypes.includes(file.type) || file.name.endsWith('.txt') || file.name.endsWith('.md')
+  }
 
   return (
     <div className="h-full flex items-center justify-center p-8">
@@ -79,8 +90,11 @@ export function DocumentUpload({ onUpload }: DocumentUploadProps) {
             onChange={handleFileInput}
           />
 
-          <Button asChild size="lg" className="bg-primary hover:bg-primary/90">
-            <label htmlFor="file-upload" className="cursor-pointer">
+          <Button asChild size="lg" className="bg-primary hover:bg-primary/90" disabled={disabled}>
+            <label
+              htmlFor="file-upload"
+              className={disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+            >
               <FileText className="h-4 w-4 mr-2" />
               Choose File
             </label>
@@ -110,5 +124,5 @@ export function DocumentUpload({ onUpload }: DocumentUploadProps) {
         </motion.div>
       </motion.div>
     </div>
-  );
+  )
 }

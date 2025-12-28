@@ -1,59 +1,169 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Github } from 'lucide-react';
-import { DocumentUpload } from './components/DocumentUpload';
-import { DocumentViewer } from './components/DocumentViewer';
-import { ChatArea } from './components/ChatArea';
-import { DocumentService } from './utils/documentService';
-import type { Document, Message } from './types/document';
+import { useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Github } from 'lucide-react'
+import { DocumentUpload } from './components/DocumentUpload'
+import { DocumentViewer } from './components/DocumentViewer'
+import { ChatArea } from './components/ChatArea'
+import { DocumentService } from './utils/documentService'
+import type { Document, Message, RetrievalResult } from './types/document'
 
 export default function App() {
-  const [document, setDocument] = useState<Document | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [document, setDocument] = useState<Document | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [isIndexing, setIsIndexing] = useState(false)
+  const [highlightedSource, setHighlightedSource] = useState<RetrievalResult | null>(null)
+  const [modelsReady, setModelsReady] = useState(false)
+  const [modelError, setModelError] = useState<string | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   const handleFileUpload = async (file: File) => {
-    try {
-      const processedDoc = await DocumentService.processFile(file);
-      setDocument(processedDoc);
-      setMessages([]); // Reset messages when new document is uploaded
-    } catch (error) {
-      console.error('Error processing document:', error);
-    }
-  };
+    console.log('[App] handleFileUpload called with:', file.name, file.type)
 
-  const handleRemoveDocument = () => {
-    setDocument(null);
-    setMessages([]);
-  };
+    try {
+      console.log('[App] Processing file...')
+      const processedDoc = await DocumentService.processFile(file)
+      console.log('[App] File processed successfully, setting document state')
+
+      // set doc state for pdf viewer
+      setDocument(processedDoc)
+      setMessages([])
+      setHighlightedSource(null)
+      setModelError(null)
+      console.log('[App] Document state set, viewer should now be visible')
+
+      if (processedDoc.chunks && processedDoc.chunks.length > 0) {
+        console.log('[App] Will initialize models in background...')
+        setIsIndexing(true)
+
+        setTimeout(async () => {
+          try {
+            console.log('[App] Starting model initialization...')
+            const { embeddingService } = await import('./utils/embeddingService')
+            const { ragService } = await import('./utils/ragService')
+
+            if (!embeddingService.isReady()) {
+              console.log('[App] Initializing embedding service...')
+              await embeddingService.initialize()
+            }
+
+            console.log('[App] Indexing document...')
+            await ragService.indexDocument(processedDoc)
+            setModelsReady(true)
+            console.log('[App] Models ready')
+          } catch (e) {
+            console.error('[App] Failed to initialize models:', e)
+            setModelError(e instanceof Error ? e.message : 'Failed to load AI models')
+          } finally {
+            setIsIndexing(false)
+          }
+        }, 100)
+      }
+    } catch (error) {
+      console.error('[App] Error processing document:', error)
+      setIsIndexing(false)
+    }
+  }
+
+  const handleRemoveDocument = async () => {
+    setDocument(null)
+    setMessages([])
+    setHighlightedSource(null)
+    setModelError(null)
+
+    try {
+      const { ragService } = await import('./utils/ragService')
+      ragService.clearIndex()
+    } catch (e) {}
+  }
 
   const handleSendMessage = async (content: string) => {
-    if (!document || isGenerating) return;
+    if (!document || isGenerating) return
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content,
       timestamp: new Date(),
-    };
+    }
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage])
+    setIsGenerating(true)
 
-    setIsGenerating(true);
     try {
-      const responseContent = await DocumentService.generateResponse(content, document.content);
+      if (!modelsReady) {
+        throw new Error(
+          'AI models are not loaded. The document viewer works, but chat requires the models to load successfully.'
+        )
+      }
+
+      const { ragService } = await import('./utils/ragService')
+      const { llmService } = await import('./utils/llmService')
+
+      // init llm
+      if (!llmService.isReady()) {
+        await llmService.initialize()
+      }
+
+      const response = await ragService.query(content, 3)
+
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: responseContent,
+        content: response.answer,
         timestamp: new Date(),
-      };
+        sources: response.sources,
+      }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Error generating response:', error)
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Error: ${errorMsg}`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, assistantMessage])
     } finally {
-      setIsGenerating(false);
+      setIsGenerating(false)
     }
-  };
+  }
+
+  const handleSourceClick = useCallback((source: RetrievalResult) => {
+    setHighlightedSource(source)
+  }, [])
+
+  const handleRetryModels = async () => {
+    if (!document || isRetrying) return
+
+    setIsRetrying(true)
+    setModelError(null)
+
+    try {
+      // reset services
+      const { embeddingService } = await import('./utils/embeddingService')
+      const { llmService } = await import('./utils/llmService')
+      const { ragService } = await import('./utils/ragService')
+
+      embeddingService.reset()
+      llmService.reset()
+      ragService.clearIndex()
+
+      // re initialize
+      console.log('[App] Retrying model initialization...')
+      await embeddingService.initialize()
+      await ragService.indexDocument(document)
+      setModelsReady(true)
+      console.log('[App] Models ready after retry')
+    } catch (e) {
+      console.error('[App] Retry failed:', e)
+      setModelError(e instanceof Error ? e.message : 'Failed to load AI models')
+    } finally {
+      setIsRetrying(false)
+    }
+  }
 
   return (
     <div className="dark">
@@ -62,7 +172,7 @@ export default function App() {
           {!document ? (
             <motion.div
               key="upload"
-              className="flex-1 flex items-center justify-center"
+              className="flex-1 flex flex-col items-center justify-center gap-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -74,17 +184,22 @@ export default function App() {
             <>
               <motion.div
                 key="viewer"
-                className="w-3/4 flex-shrink-0"
+                className="w-3/4 h-full flex-shrink-0 overflow-hidden"
                 initial={{ x: -100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               >
-                <DocumentViewer document={document} onRemove={handleRemoveDocument} />
+                <DocumentViewer
+                  document={document}
+                  onRemove={handleRemoveDocument}
+                  highlightedSource={highlightedSource}
+                  isIndexing={isIndexing}
+                />
               </motion.div>
 
               <motion.div
                 key="chat"
-                className="w-1/4 flex-shrink-0"
+                className="w-1/4 h-full flex-shrink-0 overflow-hidden"
                 initial={{ x: 100, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200, delay: 0.1 }}
@@ -95,6 +210,10 @@ export default function App() {
                   isGenerating={isGenerating}
                   hasDocument={!!document}
                   documentName={document?.name}
+                  onSourceClick={handleSourceClick}
+                  modelError={modelError}
+                  onRetry={handleRetryModels}
+                  isRetrying={isRetrying}
                 />
               </motion.div>
             </>
@@ -121,5 +240,5 @@ export default function App() {
         </AnimatePresence>
       </div>
     </div>
-  );
+  )
 }

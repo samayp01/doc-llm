@@ -1,16 +1,20 @@
-import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, BookOpen } from 'lucide-react';
-import { ChatInput } from './ChatInput';
-import { ChatMessage } from './ChatMessage';
-import type { Message } from '../types/document';
+import { useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Sparkles, BookOpen, RefreshCw } from 'lucide-react'
+import { ChatInput } from './ChatInput'
+import { ChatMessage } from './ChatMessage'
+import type { Message, RetrievalResult } from '../types/document'
 
 interface ChatAreaProps {
-  messages: Message[];
-  onSendMessage: (content: string) => void;
-  isGenerating: boolean;
-  hasDocument: boolean;
-  documentName?: string;
+  messages: Message[]
+  onSendMessage: (content: string) => void
+  isGenerating: boolean
+  hasDocument: boolean
+  documentName?: string
+  onSourceClick?: (source: RetrievalResult) => void
+  modelError?: string | null
+  onRetry?: () => void
+  isRetrying?: boolean
 }
 
 export function ChatArea({
@@ -19,17 +23,21 @@ export function ChatArea({
   isGenerating,
   hasDocument,
   documentName,
+  onSourceClick,
+  modelError,
+  onRetry,
+  isRetrying,
 }: ChatAreaProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-  const hasMessages = messages.length > 0;
+  const hasMessages = messages.length > 0
 
   if (!hasDocument) {
-    return <EmptyState />;
+    return <EmptyState />
   }
 
   if (!hasMessages) {
@@ -38,8 +46,11 @@ export function ChatArea({
         onSendMessage={onSendMessage}
         isGenerating={isGenerating}
         documentName={documentName}
+        modelError={modelError}
+        onRetry={onRetry}
+        isRetrying={isRetrying}
       />
-    );
+    )
   }
 
   return (
@@ -59,7 +70,12 @@ export function ChatArea({
           >
             <AnimatePresence mode="popLayout">
               {messages.map((message, index) => (
-                <ChatMessage key={message.id} message={message} index={index} />
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  index={index}
+                  onSourceClick={onSourceClick}
+                />
               ))}
             </AnimatePresence>
             {isGenerating && <GeneratingIndicator />}
@@ -72,7 +88,7 @@ export function ChatArea({
         <ChatInput onSend={onSendMessage} disabled={isGenerating} />
       </div>
     </motion.div>
-  );
+  )
 }
 
 function EmptyState() {
@@ -98,22 +114,26 @@ function EmptyState() {
           <BookOpen className="h-7 w-7 text-primary" />
         </motion.div>
         <h3 className="text-sm mb-2 text-muted-foreground">No Document</h3>
-        <p className="text-xs text-muted-foreground">
-          Upload a file to begin
-        </p>
+        <p className="text-xs text-muted-foreground">Upload a file to begin</p>
       </motion.div>
     </div>
-  );
+  )
 }
 
 function WelcomeScreen({
   onSendMessage,
   isGenerating,
   documentName,
+  modelError,
+  onRetry,
+  isRetrying,
 }: {
-  onSendMessage: (content: string) => void;
-  isGenerating: boolean;
-  documentName?: string;
+  onSendMessage: (content: string) => void
+  isGenerating: boolean
+  documentName?: string
+  modelError?: string | null
+  onRetry?: () => void
+  isRetrying?: boolean
 }) {
   return (
     <div className="h-full flex flex-col border-l border-border">
@@ -152,19 +172,37 @@ function WelcomeScreen({
               transition={{ delay: 0.4, duration: 0.5 }}
             >
               <h2 className="text-lg mb-2">Ask Questions</h2>
-              <p className="text-xs text-muted-foreground">
-                Query your document with AI
-              </p>
+              <p className="text-xs text-muted-foreground">Query your document with AI</p>
             </motion.div>
+
+            {modelError && (
+              <motion.div
+                className="text-xs text-amber-500 bg-amber-500/10 rounded p-3 mt-2 space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p>AI chat unavailable: Models failed to load</p>
+                {onRetry && (
+                  <button
+                    onClick={onRetry}
+                    disabled={isRetrying}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed rounded text-amber-400 transition-colors mx-auto"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                    {isRetrying ? 'Retrying...' : 'Retry'}
+                  </button>
+                )}
+              </motion.div>
+            )}
           </motion.div>
         </motion.div>
       </div>
 
       <div className="border-t border-border bg-card p-3">
-        <ChatInput onSend={onSendMessage} disabled={isGenerating} autoFocus />
+        <ChatInput onSend={onSendMessage} disabled={isGenerating || !!modelError} autoFocus />
       </div>
     </div>
-  );
+  )
 }
 
 function GeneratingIndicator() {
@@ -202,5 +240,5 @@ function GeneratingIndicator() {
         </div>
       </div>
     </motion.div>
-  );
+  )
 }

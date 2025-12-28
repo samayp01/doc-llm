@@ -1,15 +1,15 @@
-import { Plus, Trash2, MessageSquare } from 'lucide-react';
-import { motion } from 'motion/react';
-import { Button } from './ui/button';
-import { ScrollArea } from './ui/scroll-area';
-import type { Chat } from '../types/chat';
+import { Plus, Trash2, MessageSquare } from 'lucide-react'
+import { motion } from 'motion/react'
+import { Button } from './ui/button'
+import { ScrollArea } from './ui/scroll-area'
+import type { Chat } from '../types/chat'
 
 interface ChatSidebarProps {
-  chats: Chat[];
-  currentChatId: string | null;
-  onNewChat: () => void;
-  onSelectChat: (chatId: string) => void;
-  onDeleteChat: (chatId: string) => void;
+  chats: Chat[]
+  currentChatId: string | null
+  onNewChat: () => void
+  onSelectChat: (chatId: string) => void
+  onDeleteChat: (chatId: string) => void
 }
 
 export function ChatSidebar({
@@ -22,8 +22,8 @@ export function ChatSidebar({
   return (
     <aside className="w-64 bg-[#1a1d29] border-r border-border flex flex-col h-screen">
       <div className="p-4 border-b border-border">
-        <Button 
-          onClick={onNewChat} 
+        <Button
+          onClick={onNewChat}
           className="w-full bg-primary hover:bg-primary/90 transition-all hover:scale-[1.02]"
           size="sm"
         >
@@ -62,8 +62,8 @@ export function ChatSidebar({
                   initial={{ opacity: 0, scale: 0.8 }}
                   whileHover={{ scale: 1.1, opacity: 1 }}
                   onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteChat(chat.id);
+                    e.stopPropagation()
+                    onDeleteChat(chat.id)
                   }}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/20 rounded transition-all"
                 >
@@ -75,5 +75,5 @@ export function ChatSidebar({
         </div>
       </ScrollArea>
     </aside>
-  );
+  )
 }
