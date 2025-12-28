@@ -87,8 +87,10 @@ class EmbeddingService {
     const embeddings = new Map<number, number[]>()
 
     for (let i = 0; i < chunks.length; i++) {
-      const embedding = await this.embedText(chunks[i].text)
-      embeddings.set(chunks[i].id, embedding)
+      const chunk = chunks[i]
+      if (!chunk) continue
+      const embedding = await this.embedText(chunk.text)
+      embeddings.set(chunk.id, embedding)
       onProgress?.(i + 1, chunks.length)
     }
 

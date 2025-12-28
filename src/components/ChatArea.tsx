@@ -22,7 +22,6 @@ export function ChatArea({
   onSendMessage,
   isGenerating,
   hasDocument,
-  documentName,
   onSourceClick,
   modelError,
   onRetry,
@@ -45,7 +44,6 @@ export function ChatArea({
       <WelcomeScreen
         onSendMessage={onSendMessage}
         isGenerating={isGenerating}
-        documentName={documentName}
         modelError={modelError}
         onRetry={onRetry}
         isRetrying={isRetrying}
@@ -123,14 +121,12 @@ function EmptyState() {
 function WelcomeScreen({
   onSendMessage,
   isGenerating,
-  documentName,
   modelError,
   onRetry,
   isRetrying,
 }: {
   onSendMessage: (content: string) => void
   isGenerating: boolean
-  documentName?: string
   modelError?: string | null
   onRetry?: () => void
   isRetrying?: boolean

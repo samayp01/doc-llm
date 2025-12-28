@@ -19,17 +19,24 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.1.0",
     "@vitest/coverage-v8": "^4.0.16",
     "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
     "vite": "^6.4.1",
+    "vite-plugin-compression": "^0.5.1",
     "vitest": "^4.0.16"
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "tsc --noEmit"
   }
 }

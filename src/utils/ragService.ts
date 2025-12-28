@@ -1,6 +1,6 @@
 import { embeddingService } from './embeddingService'
 import { llmService } from './llmService'
-import type { Document, DocumentChunk, RetrievalResult } from '../types/document'
+import type { Document, RetrievalResult } from '../types/document'
 import { RAG_MAX_SOURCES, RAG_RELEVANCE_THRESHOLD } from '../config'
 
 export interface RAGResponse {

@@ -28,10 +28,16 @@ Run all tests:
 npm test
 ```
 
-Run tests in watch mode:
+Run unit tests only:
 
 ```bash
-npm run test:watch
+npm run test:unit
+```
+
+Run integration tests only:
+
+```bash
+npm run test:integration
 ```
 
 Run tests with coverage:

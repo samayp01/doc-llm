@@ -120,7 +120,7 @@ export function PdfRenderer({ fileData, highlightText, onPageChange }: PdfRender
           const pageWrapper = document.createElement('div')
           pageWrapper.className =
             'pdf-page mb-4 shadow-lg rounded-lg overflow-hidden bg-white relative'
-          pageWrapper.dataset.page = String(pageNum)
+          pageWrapper.dataset['page'] = String(pageNum)
           pageWrapper.style.width = `${viewport.width}px`
           pageWrapper.style.height = `${viewport.height}px`
 
@@ -138,6 +138,7 @@ export function PdfRenderer({ fileData, highlightText, onPageChange }: PdfRender
           await page.render({
             canvasContext: context,
             viewport: viewport,
+            canvas: canvas,
           }).promise
 
           // Render text layer for selection
@@ -153,19 +154,23 @@ export function PdfRenderer({ fileData, highlightText, onPageChange }: PdfRender
             if (!item.str.trim()) return
 
             const tx = item.transform
-            const fontSize = Math.sqrt(tx[0] * tx[0] + tx[1] * tx[1])
-            const x = tx[4] * scale
-            const y = (viewport.height / scale - tx[5]) * scale - fontSize * scale
+            const tx0 = tx[0] ?? 0
+            const tx1 = tx[1] ?? 0
+            const tx4 = tx[4] ?? 0
+            const tx5 = tx[5] ?? 0
+            const fontSize = Math.sqrt(tx0 * tx0 + tx1 * tx1)
+            const x = tx4 * scale
+            const y = (viewport.height / scale - tx5) * scale - fontSize * scale
             const width = item.width * scale
             const height = fontSize * scale
 
             const span = document.createElement('span')
             span.textContent = item.str
             // Store position data for highlighting
-            span.dataset.x = String(x)
-            span.dataset.y = String(y)
-            span.dataset.w = String(width || fontSize * item.str.length * 0.6)
-            span.dataset.h = String(height)
+            span.dataset['x'] = String(x)
+            span.dataset['y'] = String(y)
+            span.dataset['w'] = String(width || fontSize * item.str.length * 0.6)
+            span.dataset['h'] = String(height)
             span.style.cssText = `
               position: absolute;
               left: ${x}px;
@@ -298,10 +303,10 @@ export function PdfRenderer({ fileData, highlightText, onPageChange }: PdfRender
         if (!pageWrapper) return
 
         // Use stored position data
-        const x = parseFloat(span.dataset.x || '0')
-        const y = parseFloat(span.dataset.y || '0')
-        const w = parseFloat(span.dataset.w || '50')
-        const h = parseFloat(span.dataset.h || '12')
+        const x = parseFloat(span.dataset['x'] ?? '0')
+        const y = parseFloat(span.dataset['y'] ?? '0')
+        const w = parseFloat(span.dataset['w'] ?? '50')
+        const h = parseFloat(span.dataset['h'] ?? '12')
 
         const highlight = document.createElement('div')
         highlight.className = 'highlight-overlay'
